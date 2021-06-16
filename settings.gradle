@@ -1,3 +1,3 @@
-include ':Setsuna'
+include ':setsuna'
 include ':app'
 rootProject.name = "Setsuna"
