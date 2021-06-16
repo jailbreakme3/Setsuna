@@ -1,0 +1,3 @@
+include ':Setsuna'
+include ':app'
+rootProject.name = "Setsuna"
