@@ -3,10 +3,8 @@ package com.jailbreakme3.setsuna.setsuna
 import com.jailbreakme3.setsuna.RequestType
 import com.jailbreakme3.setsuna.log
 import com.jailbreakme3.setsuna.newHttpUrl
-import okhttp3.Headers
-import okhttp3.HttpUrl
-import okhttp3.Request
-import okhttp3.RequestBody
+import okhttp3.*
+import org.json.JSONObject
 
 
 /**
@@ -28,34 +26,40 @@ fun buildRequestFull(
     requestType: RequestType? = null
 ): Request {
     return buildRequest {
-        (takeIf { requestType == RequestType.GET }?.let {
-            getGetUrl(
-                url,
-                params
-            ) { it.toQueryString() }
-        } ?: url)
-            .also {
-                buildUrl(it).newHttpUrl {
+        url.also {
+            buildUrl(it).newHttpUrl {
+                if (requestType == RequestType.GET) {
                     for ((key, value) in params) {
                         addQueryParameter(key, value)
                     }
-                }.apply {
-                    url(this)
-                    this.log()
                 }
+            }.apply {
+                url(this)
+                this.log()
             }
+        }
+
+
+
         when (requestType) {
-            RequestType.POST -> post(body!!)
-            RequestType.PUT -> put(body!!)
-            RequestType.DELETE -> delete(body!!)
+            RequestType.POST -> post(RequestBody.create(mediaType, JSONObject(params).toString()))
+            RequestType.PUT -> put(RequestBody.create(mediaType, JSONObject(params).toString()))
+            RequestType.DELETE -> delete(
+                RequestBody.create(
+                    mediaType,
+                    JSONObject(params).toString()
+                )
+            )
             else -> get()
         }
-        if (!headers.isNullOrEmpty()) {
+        if (headers.isNotEmpty()) {
             headers(Headers.of(headers.toMutableMap()))
             headers.log()
         }
     }
 }
+
+private val mediaType = MediaType.parse("application/json; charset=utf-8")
 
 
 /**
