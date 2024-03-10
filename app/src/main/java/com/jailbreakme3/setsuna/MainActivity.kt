@@ -8,6 +8,7 @@ import com.jailbreakme3.setsuna.setsuna.SetsunaCoroutineScope
 import com.jailbreakme3.setsuna.setsuna.get
 import kotlinx.coroutines.*
 import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 
 class MainActivity : AppCompatActivity() {
 
@@ -26,49 +27,45 @@ class MainActivity : AppCompatActivity() {
 
         // init Setsuna
         Setsuna.init {
-            // optional
-            baseUrl("https://www.baidu.com/")
-            // customized okHttpClient(optional, when empty, use default client)
-            okHttpClient {
-                OkHttpClient()
-            }
+//            baseUrl("")
             converter {
-                // conventer which implements ResponseBodyConverter (optional)
                 GsonConverter.create()
             }
+            okHttpClient {
+                OkHttpClient.Builder()
+                    .addInterceptor(
+                        // 拦截器
+                        HttpLoggingInterceptor().setLevel(
+                            HttpLoggingInterceptor.Level.BODY
+                        )
+                    )
+                    .addInterceptor {
+                        it.proceed(
+                            it.request()
+                                .newBuilder()
+                                // 全局 header
+                                .header("token", "xxxxxx")
+                                .addHeader("version", "3.0.0")
+                                .build()
+                        )
+                    }
+                    .build()
+            }
+
         }
 
-        request()
+        binding.btStart.setOnClickListener {
+            request()
+        }
+
     }
+
 
     // 测试
     private fun request() {
         SetsunaCoroutineScope.launch {
-            get {
-                // https://github.com/MZCretin/RollToolsApi
-                url = "/qrcode/create/single"
-                param {
-                    "content" - "测试内容"
-                    "type" - "0"
-                }
-                param(mapOf("key" to "value"))
-                param("key" to "value")
-                // optional grammar
-                header {
-                    "key" - "xxxxx"
-                }
-                header(APP_ID, APP_SECRET)
-            }.parseOrThrow<QRCodeData>().apply {
-                this.log()
-            }
-
-            val result = get {
-                url = ""
-            }.parse<QRCodeData>()
-
-            // run in a new thread or corountine
-            Setsuna.get {
-                url = ""
+            Setsuna.post {
+                url = "https://${binding.etUrl.text}"
                 params {
                     "content" - "测试内容"
                     "type" - "0"
@@ -76,29 +73,13 @@ class MainActivity : AppCompatActivity() {
                 headers {
                     "key" - "value"
                 }
-
-                onSuccess {
-                    // callback when request succeed
-                    // handle the response yourself
-                    it.body()
-                }
-
                 onSuccessWithParse<QRCodeData> {
-                    // callback when request succeed
-                    // get the response with a parsed nullable entity
+                    val result = it ?: QRCodeData()
+                    // 拿到返回值
+                    binding.tvResponse.text = result.toString()
                 }
-
-                // optional below
-                onStart {
-                    // callback when request start
-                }
-
-                onFinish {
-                    // callback when request finished
-                }
-
                 onFail {
-                    // callback when request failed
+                    binding.tvResponse.text = it.message?:"请求错误"
                 }
             }
 
